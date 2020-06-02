@@ -1,46 +1,51 @@
 package parse
 
-import(
-	"log"
-	"regexp"
-	"strings"
-	"strconv"
-	"net/http"
+import (
 	"github.com/PuerkitoBio/goquery"
+	"log"
+	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 type DoubanMovie struct {
-	Title string
+	Title    string
 	Subtitle string
-	Other string
-	Desc string
-	Year string
-	Area string
-	Tag string
-	Star string
-	Comment string
-	Quote string
+	Other    string
+	Desc     string
+	Year     string
+	Area     string
+	Tag      string
+	Star     string
+	Comment  string
+	Quote    string
 }
 
 type Page struct {
 	Page int
-	Url string
+	Url  string
 }
 
-func GetPages(url string) []Page{
-	client:= &http.Client{}
-	req,_ := http.NewRequest("GET",url,nil)
-	req.Header.Add("User-Agent","Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE")
+func HttpGet(url string) *goquery.Document {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE")
 	res, _ := client.Do(req)
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil
 	}
+	return doc
+}
+
+func GetPages(url string) []Page {
+	doc := HttpGet(url)
 	return ParsePages(doc)
 }
 
-func ParsePages(doc *goquery.Document) (pages []Page){
-	pages = append(pages, Page{Page: 1, Url:""})
+func ParsePages(doc *goquery.Document) (pages []Page) {
+	pages = append(pages, Page{Page: 1, Url: ""})
 	doc.Find("#content > div > div.article > div.paginator > a").Each(func(i int, s *goquery.Selection) {
 		page, _ := strconv.Atoi(s.Text())
 		url, _ := s.Attr("href")
@@ -53,17 +58,9 @@ func ParsePages(doc *goquery.Document) (pages []Page){
 }
 
 func ParseMovies(url string) (movies []DoubanMovie) {
-	client:= &http.Client{}
-	req,_ := http.NewRequest("GET",url,nil)
-	req.Header.Add("User-Agent","Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE")
-	res, _ := client.Do(req)
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
+	doc := HttpGet(url)
 	doc.Find("#content > div > div.article > ol > li").Each(func(i int, s *goquery.Selection) {
 		title := s.Find(".hd a span").Eq(0).Text()
-
 		subtitle := s.Find(".hd a span").Eq(1).Text()
 		subtitle = strings.TrimLeft(subtitle, "  / ")
 
@@ -87,6 +84,10 @@ func ParseMovies(url string) (movies []DoubanMovie) {
 
 		quote := s.Find(".quote .inq").Text()
 
+		rank := s.Find("div em").Eq(0).Text()
+
+		log.Println(rank)
+
 		movie := DoubanMovie{
 			Title:    title,
 			Subtitle: subtitle,
@@ -99,8 +100,6 @@ func ParseMovies(url string) (movies []DoubanMovie) {
 			Comment:  comment,
 			Quote:    quote,
 		}
-
-		log.Printf("i: %d, movie: %v", i, movie)
 
 		movies = append(movies, movie)
 	})
