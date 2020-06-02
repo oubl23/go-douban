@@ -2,7 +2,8 @@ package main
 
 import (
 	"strings"
-	"douban/parse"
+	"fmt"
+	"github.com/oubl23/go-douban/parse"
 )
 
 var (
@@ -16,7 +17,6 @@ func Start(){
 	for _,page := range pages{
 		url := strings.Join([]string{BaseUrl, page.Url}, "");
 		moives = append(moives, parse.ParseMovies(url)...)
-
 	}
 	fmt.Println(moives)
 }
